@@ -1,7 +1,14 @@
 const decks = require("../data/decks-data")
-const ErrorCode = require("../error/ErrorCodes")
-class ValidationError extends Error { }
+const controller = require("../controlledobject")
 
+let lastId = decks.reduce((maxId, paste) => Math.max(maxId, paste.id), 0)
+const d = controller(decks, lastId, {
+    paramName: "deckId",
+    requiredProperties: ["name", "description"]
+})
+
+module.exports = d;
+/*
 class Deck {
     constructor({ name = "", description = "", id = 0 } = {}) {
         this.name = name
@@ -146,4 +153,4 @@ class Deck {
     ]
 }
 
-module.exports = Deck
+module.exports = Deck*/

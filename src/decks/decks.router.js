@@ -4,7 +4,7 @@ const Deck = require("./decks.controller")
 
 router.route("/").get(Deck.list).post(Deck.create).all(InvalidMethod)
 
-router.route("/:deckid")
+router.route("/:deckId")
     .get(Deck.read)
     .put(Deck.update)
     .delete(Deck.delete)
