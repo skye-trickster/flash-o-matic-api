@@ -12,12 +12,22 @@
         - [DEBUGGER / NODEMON](#debugger--nodemon)
     6. [Generic Error Handler](#generic-error-handler)
     7. [Not Found Handler](#not-found-handler)
-    8. [Middleware Review](#middleware-review)
-    9. [Task: Quick Inline Middleware Test: `src/app.js`](#task-quick-inline-middleware-test-srcappjs)
+    8. [MethodNotFound Handler](#methodnotfound-handler)
+    9. [Other Response Codes](#other-response-codes)
+    10. [Middleware Review](#middleware-review)
+    11. [Review: Common HTTP Request Methods](#review-common-http-request-methods)
+    12. [Task: Quick Inline Middleware Test: `src/app.js`](#task-quick-inline-middleware-test-srcappjs)
         - [QUICK INLINE MIDDLEWARE TEST: POST](#quick-inline-middleware-test-post)
+    13. [Making `.router.js` and `.controller.js` Files](#making-routerjs-and-controllerjs-files)
+        - [Import Router: src/app.js](#import-router-srcappjs)
+        - [Add middleware functions: src/decks/decks.controller.js](#add-middleware-functions-srcdecksdeckscontrollerjs)
+        - [Add router code: src/decks/decks.router.js](#add-router-code-srcdecksdecksrouterjs)
+
 
 ## Introduction
 This is not a README file, but these are the typed version of my step-by-step notes of making a Backend project from scratch that I have writen down for studying purposes. I'm adding this to the repository moreso for myself and so I can refer to the steps and fix any incorrect statements or issues.
+
+**[[Back To Top]](#backenddatabase-step-by-step-workthrough)**
 
 ## Backend: Node.js
  
@@ -58,6 +68,7 @@ app.use(cors()) // enable CORS globally for whole API
     // you can use this temporarily for testing
     // remove this code eventually if you don't want an open API
 ```
+
 ### Run Express Server: `Command Line`
 How to run express application
 ```
@@ -98,17 +109,53 @@ module.exports = errorHandler
 5. Within `app.js`, import errorHandler and write in `app.use(errorHandler)` at the end before `module.exports`
 
 ### Not Found Handler
-1. Created `src/errors/NotFound.js` file. Will house generic error function
-2. Write in notFound error function within it
+1. Created `src/errors/NotFound.js` file. Will house function for paths that aren't implemented.
+2. Write in notFound error function within the file.
 
 ```js
 function notFound(request, response, next) {
-    return next({ status: 404, message: `Path not found: ${request.originalUrl}` })
+    return next({ status: 404, message: `Path not found: ${request.originalUrl}` }) // yields a 404 error: Path not found
 }
 module.exports = notFound
 ```
 3. Within `app.js`, import notFound and write in `app.use(notFound)` just before `app.use(errorHandler)`
 4. Note: `request.originalUrl` is the URL path that the user is calling to.
+
+### MethodNotFound Handler
+- Handler used for request methods that are not supported on a particular route.
+- usually imported in router files.
+- Create `src/errors/methodNotFound.js` file. Will house methodNotFound method
+```js
+function methodNotFound(request, response, next) {
+    next({
+        status: 405,
+        message: `Requested method invalid: ${request.method}`
+    }) // yields a 405 error: Invalid Method
+}
+```
+
+### Other response codes
+
+Response Classes:
+Code Class | Class Meaning
+:---- | :----
+`100-199` | Information response 
+`200-299` | Successful response / process
+`300-399` | Redirect to another URL
+`400-499` | Client error, problem with how request was sent
+`500-599` | Server error. Good request but server issues.
+
+Common response codes:
+Code | Text | Code Meaning
+:---- | :----: | :-----
+`200` | `OK` | Request successful
+`201` | `CREATED` | Resource was created
+`204` | `NO CONTENT` | Request successful, but nothing returned; useful for `DELETE` requests
+`400` | `BAD REQUEST` | Unable to Process (ex. bad syntax, invalid data, etc.)
+`403` | `FORBIDDEN` | You lack the permissions to make the request 
+`404` | `NOT FOUND` | Resource unable to be found
+`405` | `METHOD NOT ALLOWED` | Request method not supported by target
+`500` | `INTERNAL SERVER ERROR` | Unexpected failure, lack of specific information
 
 ### Middleware Review
 - Middleware is used as function that operates between request and response
@@ -123,11 +170,23 @@ function middlewareName(request, response, next) {
     - `request`: info/functions related to incoming requests as an object
     - `response`: info/functions relating to outgoing responses as an object
     - `next`: function symbolizing middleware is complete
-        - you don't use `return` in a middleware function
+        - `return` doesn't go to the next middleware function 
+            - you can use `return next()` to finish the middleware early and go to the next middleware though
         - putting parameters in `next()` will go to the `errorHandler` middleware directly
 - Two ways to end a middleware function:
     1. Give a response via `response.sendStatus()`, `response.json()`, `response.status().json()`, etc.
     2. Call `next()` to either go to the next midddleware function (if empty arguments) or `errorHandler` middleware (if not empty arguments)
+- **ORDER MATTERS FOR ROUTING/MIDDLEWARE FUNCTIONS**
+
+### Review: Common HTTP Request Methods
+Method | Meaning 
+:--- | :----
+`GET` | Request a resource. Only retrieve data.
+`POST` | Submits entity to resource. Has side effects (ex. object creation)
+`PUT` | Replace a target representative with request payload
+`DELETE` | Deletes requested resource.
+`OPTIONS` | Communication options. Useful for CORS and pre-flight especially
+`PATCH` | Partially Modify a resource.
 
 ### Task: Quick Inline Middleware Test: `src/app.js`
 - Inline request used to make sure can do a generic request in the first place
@@ -138,11 +197,13 @@ function middlewareName(request, response, next) {
     - don't worry about validation just yet.
 - Example code:
 ```js
-let newId = 1; // just to simulate a new ID. temporary
+/// NOTE: CODE WILL EVENTUALLY MOVE TO SRC/DECKS/DECKS.CONTROLLER.JS
+
+let newId = 1; // just to simulate a new ID. temporary until linking to database
 app.post("/decks", ((req, res) => {
     const { data } = req.body // gets the data from the body
     const newDeck = {
-        deck_id: ++newId, // iterates through ID
+        deck_id: newId++, // iterates through ID
         ...data // gets all of the deck information that you put in.
     }
     res.status(201).json({ data: newDeck }) // status: 201; message: { data: { [new deck information] }}
@@ -157,7 +218,7 @@ Using Postman to make a post to `"/decks"` with the following data:
 {
     "data" : {
         "front": "backend terms",
-        "back": "this is terms for the backend"
+        "back": "these are terms for the backend"
     }
 }
 ```
@@ -167,7 +228,123 @@ Using Postman to make a post to `"/decks"` with the following data:
   "data": {
     "deck_id": 3,
     "front": "backend terms",
-    "back": "this is terms for the backend"
+    "back": "these are terms for the backend"
   }
 }
 ```
+
+**[[Back To Top]](#backenddatabase-step-by-step-workthrough)**
+
+### Making `.router.js` and `.controller.js` Files
+Two ways of organizing router code:
+1. Have anonymous functions within router code (not what I'm doing)
+```js
+router.route("/").get((request, response) => {}) //all in deck.router.js
+```
+2. Have middleware functions separated in another file `src/decks.controller.js` (what I'm doing):
+```js
+function list(request, response) {} //will eventually be in deck.controller.js
+router.route("/").get(list) // will be in deck.router.js
+```
+- Every table object (decks, cards, users, etc.) should have their own folder in `src` (ex. `src/decks/`, `src/cards`, `src/users`, etc.).
+- Every table object should have a `.router.js` file and a `.controller.js` file.
+    - `src/decks/decks.router.js`: handles routing
+    - `src/decks/decks.controller.js`: handles middleware functions.
+
+#### Import Router: `src/app.js`
+- Cut inline function out of `app.js` and paste into `src/decks/decks.controller.js`. Will be useful there.
+- Replace old inline function in app.js with the router import:
+- import router file with `const decksRouter = require("./decks/router")` (will do this for every route that comes from the base URL)
+- Add route to `deckRouter` using the following: 
+```js
+app.use("/decks", deckRouter)
+    // deckRouter will handle all routing in all paths starting with "/decks"
+    // make sure to put this ABOVE notFound and errorHandler.
+    // ORDER MATTERS
+```
+
+#### Add middleware functions: `src/decks/decks.controller.js`
+- `src/decks/decks.controller.js` is where middleware functions go.
+- handles business logic with requests and responses. doesn't handle router code at all. 
+- Move previous inline function into `decks.controller.js` as `create()`, including `newId`
+```js
+let newId = 1; // still just to simulate a new ID. temporary until linking to database
+function create = (request, response) => {
+    const { data } = request.body // gets the data from the body
+    const newDeck = {
+        deck_id: newId++, // iterates through ID
+        ...data // gets all of the deck information that you put in.
+    }
+    response.status(201).json({ data: newDeck }) 
+        // status: 201; message: { data: { [new deck information] }}
+}
+
+module.exports = { create } 
+    // export for use in decks.router.js
+    // call create() function by calling controller.create()
+```
+
+#### Add router code: `src/decks/decks.router.js`
+- `src/decks/decks.router.js` handles all routing code.
+- handles all of the pathing and assigning what middleware function is called for what request.
+```js
+const router = require("express".Router()) // router object for routing
+const controller = require("./decks.controller") // controller middleware functions
+const methodNotAllowed = require("../errors/methodNotAllowed") // For functions that aren't allowed or implemented yet.
+
+router.route("/")               // for path "/decks/"
+    .post(controller.create)    // call controller.create() for POST request
+    .all(methodNotAllowed)      // reject any other request
+
+module.exports = router         // for linking to app.use in other files like app.js
+```
+
+**[[Back To Top]](#backenddatabase-step-by-step-workthrough)**
+
+### Second Request: `GET` Request
+Objectives:
+- Make a `list()` middleware function that responds with all decks
+- call `list()` upon making a `GET` request to `/decks`
+
+#### Middleware: `src/decks/decks.controller.js`
+1. make empty list `decks = []` for storing all decks
+2. Add ability to push a deck into `decks` with `create()` middleware
+    - NOTE: ensure to put it BEFORE `response.status`
+3. make function `list()` that sends JSON repsonse of decks
+4. add list function in `module.exports`
+```js
+const decks = [] // deck list. Will represent our fake database for now.
+
+function list(request, response, next) { // will be called upon GET method
+    response.json({ data: decks }) // will show all decks 
+}
+
+// ... CODE IN BETWEEN REMAINS UNTOUCHED
+
+function create(request, response, next) {
+    // ... CODE REMAINS UNTOUCHED UNTIL NEXT LINES (still makes a newDeck) 
+
+    decks.push(newDeck) // push newDeck in decks after creating newDeck
+    
+    response.status(201).json({ data: newDeck }) // unchanged. make sure to make the decks.push() BEFORE this line.
+}
+
+module.exports = {
+    create, // create is still here.
+    list // call list() function by calling controller.list
+}
+
+```
+
+#### Router: `src/decks/decks.controller.js`
+- add `.get()` method within the router
+```js
+// ... ABOVE CODE REMAINS UNCHANGED
+router.route("/")
+    .post(controller.create)    // this part is unchanged
+    .get(controller.list)       // make sure to add this BEFORE .all()
+    .all(methodNotAllowed)      // unchanged again
+
+module.exports = router
+```
+

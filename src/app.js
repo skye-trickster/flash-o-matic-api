@@ -1,25 +1,15 @@
 const express = require("express")
-const errorHandler = require("./errors/ErrorHandler")
-const notFoundError = require("./errors/NotFound")
+const errorHandler = require("./errors/errorHandler")
+const notFoundError = require("./errors/notFound")
 const cors = require("cors")
+const decksRouter = require("./decks/decks.router")
 
 const app = express()
 
 app.use(cors())
 app.use(express.json());
 
-let newId = 1;
-app.post("/decks", ((req, res) => {
-
-    const { data } = req.body
-
-    const newDeck = {
-        deck_id: ++newId,
-        ...data
-    }
-
-    res.status(201).json({ data: newDeck })
-}))
+app.use("/decks", decksRouter); // call decks router for path "/decks"
 
 app.use(notFoundError)
 app.use(errorHandler)
