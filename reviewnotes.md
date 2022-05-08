@@ -2,7 +2,7 @@
 
 ## Table of Contents: 
 1. [Introduction](#introduction)
-2. [Backend: Node.js](#backend-nodejs)
+2. [Node.js: Setup](#nodejs-setup)
     1. [Setup: `Command Line` (from blank folder)](#setup-command-line-from-blank-folder)
     2. [Setup: src/server.js (server code)](#setup-srcserverjs-server-code)
     3. [Setup: src/app.js (application code)](#setup-srcappjs-application-code)
@@ -13,12 +13,15 @@
     6. [Generic Error Handler](#generic-error-handler)
     7. [Not Found Handler](#not-found-handler)
     8. [MethodNotFound Handler](#methodnotfound-handler)
-    9. [Other Response Codes](#other-response-codes)
-    10. [Middleware Review](#middleware-review)
-    11. [Review: Common HTTP Request Methods](#review-common-http-request-methods)
-    12. [Task: Quick Inline Middleware Test: `src/app.js`](#task-quick-inline-middleware-test-srcappjs)
+3. [Request and Response Review](#request-and-response-review)
+    1. [Review: Common HTTP Request Methods](#review-common-http-request-methods)
+    2. [Review: Response Codes
+](#review-response-codes)
+4. [`Node.js`: Creating Middleware Functions](#nodejs-creating-middleware-functions)
+    1. [Review: Middleware](#review-middleware)
+    2. [Task: Quick Inline Middleware Test: `src/app.js`](#task-quick-inline-middleware-test-srcappjs)
         - [QUICK INLINE MIDDLEWARE TEST: POST](#quick-inline-middleware-test-post)
-    13. [Making `.router.js` and `.controller.js` Files](#making-routerjs-and-controllerjs-files)
+    3. [Making `.router.js` and `.controller.js` Files](#making-routerjs-and-controllerjs-files)
         - [Import Router: src/app.js](#import-router-srcappjs)
         - [Add middleware functions: src/decks/decks.controller.js](#add-middleware-functions-srcdecksdeckscontrollerjs)
         - [Add router code: src/decks/decks.router.js](#add-router-code-srcdecksdecksrouterjs)
@@ -29,7 +32,7 @@ This is not a README file, but these are the typed version of my step-by-step no
 
 **[[Back To Top]](#backenddatabase-step-by-step-workthrough)**
 
-## Backend: Node.js
+## Node.js: Setup
  
 ### Setup: `Command Line` (from blank folder)
 
@@ -134,7 +137,21 @@ function methodNotFound(request, response, next) {
 }
 ```
 
-### Other response codes
+**[[Back To Top]](#backenddatabase-step-by-step-workthrough)**
+
+## Request and Response Review
+
+### Review: Common HTTP Request Methods
+Method | Meaning 
+:--- | :----
+`GET` | Request a resource. Only retrieve data.
+`POST` | Submits entity to resource. Has side effects (ex. object creation)
+`PUT` | Replace a target representative with request payload
+`DELETE` | Deletes requested resource.
+`OPTIONS` | Communication options. Useful for CORS and pre-flight especially
+`PATCH` | Partially Modify a resource.
+
+### Review: Response Codes
 
 Response Classes:
 Code Class | Class Meaning
@@ -157,7 +174,11 @@ Code | Text | Code Meaning
 `405` | `METHOD NOT ALLOWED` | Request method not supported by target
 `500` | `INTERNAL SERVER ERROR` | Unexpected failure, lack of specific information
 
-### Middleware Review
+**[[Back To Top]](#backenddatabase-step-by-step-workthrough)**
+
+## `Node.js`: Creating Middleware Functions
+
+### Review: Middleware
 - Middleware is used as function that operates between request and response
 - Underlying business logic of an express prgram
 - Middleware function format:
@@ -177,16 +198,6 @@ function middlewareName(request, response, next) {
     1. Give a response via `response.sendStatus()`, `response.json()`, `response.status().json()`, etc.
     2. Call `next()` to either go to the next midddleware function (if empty arguments) or `errorHandler` middleware (if not empty arguments)
 - **ORDER MATTERS FOR ROUTING/MIDDLEWARE FUNCTIONS**
-
-### Review: Common HTTP Request Methods
-Method | Meaning 
-:--- | :----
-`GET` | Request a resource. Only retrieve data.
-`POST` | Submits entity to resource. Has side effects (ex. object creation)
-`PUT` | Replace a target representative with request payload
-`DELETE` | Deletes requested resource.
-`OPTIONS` | Communication options. Useful for CORS and pre-flight especially
-`PATCH` | Partially Modify a resource.
 
 ### Task: Quick Inline Middleware Test: `src/app.js`
 - Inline request used to make sure can do a generic request in the first place
@@ -348,3 +359,68 @@ router.route("/")
 module.exports = router
 ```
 
+## Database Setup
+
+### Creating a database
+- [ElephantSQL](https://www.elephantsql.com/) is a good service for PostgreSQL
+- [DBeaver](https://dbeaver.com/) is a good GUI tool for databases.
+- will not be making instructions on how to create a database instance through ElephantSQL nor setting up DBeaver at this time.
+- If want to review SQL, check out the [SQLReview](SQLReview.md) notes.
+
+### Knex Setup/Config: `Command Line`
+1. Install knex library and node-postgress database library:
+```
+npm install knex pg
+```
+2. Install `dotenv` to use environment variables in code
+    - Note 1: you can set environment variables using `.env` file
+```
+npm install dotenv
+```
+3. Initialize a new `knexfile.js` to be used in database config
+```
+npm knex init
+```
+4. Create a new `.env` file and set your database url inside
+```env
+DATABASE_URL=[Your database url here without brackets]
+```
+
+### Knex `knexfile.js` Setup / Config
+- Remember to setup configuration of dotenv library with `require("dotenv")`
+- dotenv saves the list of environment variables to `process.env`
+- this is where you set your deployment configuration (client, connection, seeds, migrations, etc.)
+```js
+require("dotenv").config() // start configuring the dotenv library
+
+const {
+  DATABASE_URL 
+    // will grab the DATABASE_URL from the environment files
+} = process.env // list of environmental variables
+
+
+module.exports = { // exports the knex configuration.
+
+  development: { // development config
+    client: 'postgres', // set to the SQL language you're using (using postgres for these notes)
+    connection: DATABASE_URL, // sets the database connection based on environment variables.
+  },
+  // ... have a config for staging and production as well.
+  // will focus just on development for now
+}
+```
+
+Another way to set the DATABASE_URL:
+
+In `.env`
+```env
+DEPLOYMENT_TYPE=development
+DATABASE_URL_DEV=[Development URL here]
+DATABASE_URL_PROD=[Production URL here]
+```
+In `knexfile.js`
+```js
+const URL = process.env['DEPLOYMENT_TYPE'] = 'production' ? 
+    process.env.DATABASE_URL_DEV
+    : process.env.DATABASE_URL_PROD
+```
